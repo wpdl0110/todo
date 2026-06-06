@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>My Tasks</title>
+
+  <!-- PWA Meta -->
+  <meta name="theme-color" content="#0f0c29" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="My Tasks" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236C63FF'/><text y='.9em' font-size='65' x='50%' dominant-baseline='middle' text-anchor='middle'>✓</text></svg>" />
+
+  <!-- Inline Manifest via JS blob (injected below) -->
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg: #0f0c29;
+      --bg2: #1a1a3e;
+      --surface: rgba(255,255,255,0.04);
+      --surface2: rgba(255,255,255,0.08);
+      --border: rgba(255,255,255,0.08);
+      --accent: #6C63FF;
+      --accent2: #9C8FFF;
+      --yellow: #FFE66D;
+      --red: #FF6B6B;
+      --teal: #4ECDC4;
+      --green: #A8E6CF;
+      --text: #eee;
+      --muted: #666;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: linear-gradient(160deg, var(--bg) 0%, var(--bg2) 60%, #141428 100%);
+      min-height: 100vh;
+      min-height: 100dvh;
+      color: var(--text);
+      overscroll-behavior: none;
+    }
+
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: calc(var(--safe-top) + 20px) 16px calc(var(--safe-bottom) + 24px);
+      min-height: 100dvh;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #6C63FF 0%, #3b3b8a 100%);
+      border-radius: 24px;
+      padding: 24px 20px 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 20px 60px rgba(108,99,255,0.35);
+    }
+    .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .date-label { color: rgba(255,255,255,0.6); font-size: 12px; margin-bottom: 2px; }
+    .title { font-size: 30px; font-weight: 900; letter-spacing: -1px; color: #fff; }
+
+    .ring-wrap { position: relative; width: 60px; height: 60px; flex-shrink: 0; }
+    .ring-wrap svg { transform: rotate(-90deg); }
+    .ring-pct {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 800; color: var(--yellow);
+    }
+
+    .prog-bar { background: rgba(255,255,255,0.15); border-radius: 99px; height: 5px; overflow: hidden; }
+    .prog-fill { height: 100%; background: var(--yellow); border-radius: 99px; transition: width .6s ease; }
+    .prog-meta { color: rgba(255,255,255,0.45); font-size: 11px; margin-top: 6px; text-align: right; }
+
+    /* ── Filter Tabs ── */
+    .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+    .tab {
+      flex: 1; padding: 9px 0; border-radius: 12px; border: none; cursor: pointer;
+      background: var(--surface); color: var(--muted); font-size: 12px; font-weight: 700;
+      transition: all .2s; font-family: inherit; position: relative;
+    }
+    .tab.active { background: rgba(108,99,255,0.3); color: #fff; box-shadow: 0 0 0 1px rgba(108,99,255,0.5); }
+    .tab-badge {
+      position: absolute; top: 4px; right: 6px;
+      background: var(--red); color: #fff; font-size: 9px; font-weight: 800;
+      border-radius: 99px; padding: 1px 4px; line-height: 1.4;
+    }
+
+    /* ── Input Section ── */
+    .input-section {
+      background: var(--surface); border-radius: 16px;
+      padding: 14px; margin-bottom: 12px;
+      border: 1px solid var(--border);
+    }
+    .input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .text-input {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 11px 14px; color: #fff; font-size: 14px;
+      outline: none; font-family: inherit;
+    }
+    .text-input::placeholder { color: var(--muted); }
+    .text-input:focus { border-color: rgba(108,99,255,0.5); }
+    .add-btn {
+      width: 44px; height: 44px; background: var(--accent); border: none; border-radius: 10px;
+      color: #fff; font-size: 26px; line-height: 1; cursor: pointer;
+      box-shadow: 0 4px 15px rgba(108,99,255,0.4);
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .add-btn:active { transform: scale(.93); box-shadow: none; }
+
+    .input-meta { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .cat-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+    .cat-chip {
+      padding: 4px 10px; border-radius: 99px; border: none; cursor: pointer;
+      font-size: 11px; font-weight: 700; transition: all .2s; font-family: inherit;
+    }
+    .star-toggle {
+      background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 700;
+      color: var(--muted); transition: color .2s; font-family: inherit;
+      white-space: nowrap;
+    }
+    .star-toggle.on { color: var(--yellow); }
+
+    /* ── List ── */
+    .list { display: flex; flex-direction: column; gap: 7px; }
+    .empty { text-align: center; padding: 48px 0; color: var(--muted); font-size: 14px; }
+    .empty-icon { font-size: 44px; margin-bottom: 10px; }
+
+    .item {
+      background: var(--surface); border-radius: 14px;
+      padding: 13px 14px; display: flex; align-items: center; gap: 10px;
+      border: 1px solid var(--border);
+      border-left: 3px solid transparent;
+      transition: opacity .3s, transform .3s;
+    }
+    .item.animating { opacity: .5; transform: scale(.97); }
+
+    .check-btn {
+      width: 24px; height: 24px; border-radius: 50%; border: 2px solid;
+      background: transparent; cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800; transition: background .2s;
+    }
+
+    .item-content { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .item-text { font-size: 14px; line-height: 1.4; word-break: break-word; transition: all .2s; }
+    .item-text.done { text-decoration: line-through; color: var(--muted); }
+    .cat-tag {
+      font-size: 10px; font-weight: 800; padding: 2px 7px;
+      border-radius: 99px; align-self: flex-start; letter-spacing: .3px;
+    }
+
+    .item-actions { display: flex; gap: 2px; flex-shrink: 0; }
+    .action-btn {
+      background: none; border: none; cursor: pointer; font-size: 15px;
+      width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; transition: background .2s;
+    }
+    .action-btn:active { background: var(--surface2); }
+
+    /* ── Snackbar ── */
+    .snack {
+      position: fixed; bottom: calc(var(--safe-bottom) + 16px); left: 50%; transform: translateX(-50%) translateY(80px);
+      background: rgba(30,30,60,0.95); color: #fff; padding: 10px 20px;
+      border-radius: 99px; font-size: 13px; font-weight: 700;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4); backdrop-filter: blur(10px);
+      transition: transform .3s cubic-bezier(.34,1.56,.64,1), opacity .3s;
+      opacity: 0; z-index: 100; white-space: nowrap;
+    }
+    .snack.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 99px; }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="date-label" id="dateLabel"></div>
+        <div class="title">My Tasks</div>
+      </div>
+      <div class="ring-wrap">
+        <svg width="60" height="60" viewBox="0 0 60 60">
+          <circle cx="30" cy="30" r="24" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="5"/>
+          <circle id="ringFill" cx="30" cy="30" r="24" fill="none" stroke="#FFE66D" stroke-width="5"
+            stroke-dasharray="150.8" stroke-dashoffset="150.8" stroke-linecap="round"
+            style="transition:stroke-dashoffset .6s ease"/>
+        </svg>
+        <div class="ring-pct" id="ringPct">0%</div>
+      </div>
+    </div>
+    <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+    <div class="prog-meta" id="progMeta">0 / 0 완료</div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-filter="전체" onclick="setFilter('전체')">전체</button>
+    <button class="tab" data-filter="오늘" onclick="setFilter('오늘')">오늘</button>
+    <button class="tab" data-filter="중요" onclick="setFilter('중요')">중요</button>
+    <button class="tab" data-filter="완료" onclick="setFilter('완료')">완료<span class="tab-badge" id="doneBadge" style="display:none"></span></button>
+  </div>
+
+  <div class="input-section">
+    <div class="input-row">
+      <input class="text-input" id="todoInput" placeholder="새 할 일 추가..." autocomplete="off" />
+      <button class="add-btn" onclick="addTodo()">+</button>
+    </div>
+    <div class="input-meta">
+      <div class="cat-chips" id="catChips"></div>
+      <button class="star-toggle" id="starToggle" onclick="toggleImportantInput()">★ 중요</button>
+    </div>
+  </div>
+
+  <div class="list" id="list"></div>
+</div>
+
+<div class="snack" id="snack"></div>
+
+<script>
+  // ── Data ──────────────────────────────────────────────────────────────────
+  const CATS = { "업무": "#FF6B6B", "개인": "#4ECDC4", "공부": "#FFE66D", "기타": "#A8E6CF" };
+
+  function today() { return new Date().toISOString().split("T")[0]; }
+
+  let todos = JSON.parse(localStorage.getItem("todos") || "null") || [
+    { id: 1, text: "앱 홈 화면에 추가하기 📱", done: false, important: true, date: today(), cat: "업무" },
+    { id: 2, text: "오늘 할 일 계획 세우기", done: false, important: false, date: today(), cat: "개인" },
+    { id: 3, text: "예시 항목 — 완료 처리해보기", done: true, important: false, date: today(), cat: "기타" },
+  ];
+
+  let filter = "전체";
+  let newCat = "업무";
+  let newImportant = false;
+
+  function save() { localStorage.setItem("todos", JSON.stringify(todos)); }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  function render() {
+    save();
+
+    // Date label
+    document.getElementById("dateLabel").textContent =
+      new Date().toLocaleDateString("ko-KR", { weekday: "long", month: "long", day: "numeric" });
+
+    // Progress
+    const done = todos.filter(t => t.done).length;
+    const total = todos.length;
+    const pct = total ? Math.round(done / total * 100) : 0;
+    const circum = 2 * Math.PI * 24;
+    document.getElementById("ringFill").style.strokeDashoffset = circum * (1 - pct / 100);
+    document.getElementById("ringPct").textContent = pct + "%";
+    document.getElementById("progFill").style.width = pct + "%";
+    document.getElementById("progMeta").textContent = done + " / " + total + " 완료";
+
+    // Done badge
+    const badge = document.getElementById("doneBadge");
+    if (done > 0) { badge.textContent = done; badge.style.display = ""; }
+    else badge.style.display = "none";
+
+    // Active tab
+    document.querySelectorAll(".tab").forEach(t => {
+      t.classList.toggle("active", t.dataset.filter === filter);
+    });
+
+    // Cat chips
+    const cc = document.getElementById("catChips");
+    cc.innerHTML = "";
+    Object.entries(CATS).forEach(([cat, color]) => {
+      const btn = document.createElement("button");
+      btn.className = "cat-chip";
+      btn.textContent = cat;
+      btn.style.background = newCat === cat ? color : "rgba(255,255,255,0.08)";
+      btn.style.color = newCat === cat ? "#1a1a2e" : "#888";
+      btn.onclick = () => { newCat = cat; render(); };
+      cc.appendChild(btn);
+    });
+
+    // Star toggle
+    const st = document.getElementById("starToggle");
+    st.classList.toggle("on", newImportant);
+
+    // Filtered list
+    const filtered = todos.filter(t => {
+      if (filter === "오늘") return t.date === today() && !t.done;
+      if (filter === "중요") return t.important && !t.done;
+      if (filter === "완료") return t.done;
+      return true;
+    });
+
+    const list = document.getElementById("list");
+    list.innerHTML = "";
+
+    if (filtered.length === 0) {
+      list.innerHTML = `<div class="empty"><div class="empty-icon">✨</div>할 일이 없어요!</div>`;
+      return;
+    }
+
+    filtered.forEach(todo => {
+      const color = CATS[todo.cat] || "#888";
+      const item = document.createElement("div");
+      item.className = "item";
+      item.id = "item-" + todo.id;
+      item.style.borderLeftColor = color;
+
+      item.innerHTML = `
+        <button class="check-btn" style="border-color:${color};color:${color}" onclick="toggleDone(${todo.id})">
+          ${todo.done ? "✓" : ""}
+        </button>
+        <div class="item-content">
+          <span class="item-text ${todo.done ? "done" : ""}">${escHtml(todo.text)}</span>
+          <span class="cat-tag" style="background:${color}22;color:${color}">${todo.cat}</span>
+        </div>
+        <div class="item-actions">
+          <button class="action-btn" style="color:${todo.important ? "#FFE66D" : "#444"}" onclick="toggleImportant(${todo.id})">★</button>
+          <button class="action-btn" style="color:#FF6B6B" onclick="deleteTodo(${todo.id})">✕</button>
+        </div>
+      `;
+      list.appendChild(item);
+    });
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+  function addTodo() {
+    const input = document.getElementById("todoInput");
+    const text = input.value.trim();
+    if (!text) { input.focus(); return; }
+    todos.unshift({ id: Date.now(), text, done: false, important: newImportant, date: today(), cat: newCat });
+    input.value = "";
+    newImportant = false;
+    render();
+    showSnack("할 일 추가됨 ✓");
+  }
+
+  function toggleDone(id) {
+    const item = document.getElementById("item-" + id);
+    if (item) item.classList.add("animating");
+    setTimeout(() => {
+      todos = todos.map(t => t.id === id ? { ...t, done: !t.done } : t);
+      render();
+    }, 200);
+  }
+
+  function toggleImportant(id) {
+    todos = todos.map(t => t.id === id ? { ...t, important: !t.important } : t);
+    render();
+  }
+
+  function deleteTodo(id) {
+    todos = todos.filter(t => t.id !== id);
+    render();
+    showSnack("삭제됨");
+  }
+
+  function setFilter(f) { filter = f; render(); }
+
+  function toggleImportantInput() { newImportant = !newImportant; render(); }
+
+  function showSnack(msg) {
+    const s = document.getElementById("snack");
+    s.textContent = msg;
+    s.classList.add("show");
+    setTimeout(() => s.classList.remove("show"), 2000);
+  }
+
+  // Enter key
+  document.getElementById("todoInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") addTodo();
+  });
+
+  // Initial render
+  render();
+
+  // ── PWA: Manifest (inline blob) ───────────────────────────────────────────
+  const manifest = {
+    name: "My Tasks",
+    short_name: "Tasks",
+    description: "심플한 To Do List 앱",
+    start_url: "./",
+    display: "standalone",
+    background_color: "#0f0c29",
+    theme_color: "#0f0c29",
+    orientation: "portrait",
+    icons: [
+      {
+        src: "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="115" fill="#6C63FF"/><text y="340" x="256" font-size="300" font-family="Arial" text-anchor="middle" fill="white">✓</text></svg>`),
+        sizes: "512x512",
+        type: "image/svg+xml",
+        purpose: "any maskable"
+      }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
+  const manifestURL = URL.createObjectURL(blob);
+  const link = document.createElement("link");
+  link.rel = "manifest";
+  link.href = manifestURL;
+  document.head.appendChild(link);
+
+  // ── PWA: Service Worker (inline) ──────────────────────────────────────────
+  if ("serviceWorker" in navigator) {
+    const swCode = `
+      const CACHE = "tasks-v1";
+      const ASSETS = [self.location.href];
+
+      self.addEventListener("install", e => {
+        e.waitUntil(
+          caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())
+        );
+      });
+
+      self.addEventListener("activate", e => {
+        e.waitUntil(
+          caches.keys().then(keys =>
+            Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+          ).then(() => self.clients.claim())
+        );
+      });
+
+      self.addEventListener("fetch", e => {
+        e.respondWith(
+          caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => cached))
+        );
+      });
+    `;
+    const swBlob = new Blob([swCode], { type: "application/javascript" });
+    const swURL = URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swURL, { scope: "./" })
+      .then(() => console.log("SW registered ✓"))
+      .catch(err => console.warn("SW:", err));
+  }
+</script>
+</body>
+</html>
+
